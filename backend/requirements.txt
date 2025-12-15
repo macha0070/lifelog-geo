@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+sqlmodel
+pandas
+python-multipart
+httpx
+pytest

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lifelog Geo - 3D Globe</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css' rel='stylesheet' />
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <div id="controls">
+        <h1>Lifelog Geo</h1>
+        <p>Your movement history</p>
+        <div id="stats">Loading data...</div>
+        <div style="margin-top: 15px;">
+            <input type="file" id="fileInput" accept=".json" style="display: none;" />
+            <button id="uploadBtn" class="btn">Upload Data</button>
+            <button id="demoBtn" class="btn"
+                style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); margin-left: 10px; color: #fff;">Load
+                Demo</button>
+        </div>
+    </div>
+
+    <div id="playback-bar">
+        <button id="playBtn" class="icon-btn">▶</button>
+        <div class="slider-container">
+            <span id="dateDisplay">--/--/--</span>
+            <input type="range" id="timeSlider" min="0" max="100" value="100" />
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
