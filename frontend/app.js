@@ -1,15 +1,27 @@
-// Replace with your actual Mapbox access token
-const mapboxToken = 'pk.eyJ1IjoiZXhhbXBsZSIsImEiOiJjbHQyYjN4YnIwMDBqMm10Z3Z4ZmoxZm54In0.replace_with_yours';
-mapboxgl.accessToken = mapboxToken;
-
-if (mapboxToken.includes('replace_with_yours')) {
-    alert('CRITICAL: You must set your Mapbox Access Token in frontend/app.js for the map to work.\n\nThe screen will look empty (or black/blue) until you do this!');
-}
-
-const map = new mapboxgl.Map({
+// Open Source / No Token Setup
+const map = new maplibregl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v11',
-    projection: 'globe',
+    style: {
+        'version': 8,
+        'sources': {
+            'osm': {
+                'type': 'raster',
+                'tiles': [
+                    'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                ],
+                'tileSize': 256,
+                'attribution': '&copy; OpenStreetMap Contributors',
+                'maxzoom': 19
+            }
+        },
+        'layers': [
+            {
+                'id': 'osm',
+                'type': 'raster',
+                'source': 'osm'
+            }
+        ]
+    },
     center: [139.6917, 35.6895], // Tokyo
     zoom: 1.5
 });
@@ -25,16 +37,6 @@ const dateDisplay = document.getElementById('dateDisplay');
 const uploadBtn = document.getElementById('uploadBtn');
 const fileInput = document.getElementById('fileInput');
 const statsDiv = document.getElementById('stats');
-
-map.on('style.load', () => {
-    map.setFog({
-        'color': 'rgb(186, 210, 235)',
-        'high-color': 'rgb(36, 92, 223)',
-        'horizon-blend': 0.02,
-        'space-color': 'rgb(11, 11, 25)',
-        'star-intensity': 0.6
-    });
-});
 
 map.on('load', loadData);
 
@@ -129,7 +131,7 @@ function initializeMapData() {
 
     // Fly to latest
     const lastLoc = coordinates[coordinates.length - 1];
-    map.flyTo({ center: lastLoc, zoom: 9, speed: 1.5 });
+    map.flyTo({ center: lastLoc, zoom: 4, speed: 1.5 }); // Lower zoom for raster map
 }
 
 // Visualization Update Logic
@@ -171,7 +173,6 @@ playBtn.addEventListener('click', () => {
     playBtn.innerText = isPlaying ? '⏸' : '▶';
 
     if (isPlaying) {
-        // If at end, restart
         if (parseInt(timeSlider.value) >= allLocations.length - 1) {
             timeSlider.value = 0;
         }
@@ -185,9 +186,6 @@ function animate() {
     if (!isPlaying) return;
 
     let currentValue = parseInt(timeSlider.value);
-    // Simple speed: advance by 10 points per frame (adjust as needed)
-    // For smoother time-based animation, we'd calculate based on delta time, 
-    // but index-based is easier for "replaying history" without waiting through long gaps.
     let nextValue = currentValue + 5;
 
     if (nextValue >= allLocations.length - 1) {
@@ -223,7 +221,6 @@ demoBtn.addEventListener('click', () => {
 function generateDemoData() {
     statsDiv.innerText = 'Generating demo path...';
 
-    // Create a path: Tokyo -> Mt Fuji -> Nagoya -> Kyoto -> Osaka
     const waypoints = [
         { lat: 35.6895, lng: 139.6917, name: "Tokyo" },
         { lat: 35.3606, lng: 138.7274, name: "Mt Fuji" },
@@ -234,7 +231,6 @@ function generateDemoData() {
 
     const demoLocations = [];
     const startTime = new Date().getTime();
-    const speed = 0.05; // Interpolation steps
 
     for (let i = 0; i < waypoints.length - 1; i++) {
         const start = waypoints[i];
@@ -245,10 +241,8 @@ function generateDemoData() {
             const t = j / steps;
             const lat = start.lat + (end.lat - start.lat) * t;
             const lng = start.lng + (end.lng - start.lng) * t;
-            // Add some noise/curve
             const noise = Math.sin(t * Math.PI) * 0.05;
 
-            // Fake timestamp: 1 hour per step
             const timestamp = new Date(startTime + (demoLocations.length * 3600000));
 
             demoLocations.push({
@@ -261,11 +255,7 @@ function generateDemoData() {
 
     allLocations = demoLocations;
     statsDiv.innerText = `Loaded ${allLocations.length} demo points`;
-
-    // Reset Slider
     initializeMapData();
-
-    // Auto play
     setTimeout(() => {
         if (!isPlaying) playBtn.click();
     }, 1000);
@@ -291,8 +281,6 @@ fileInput.addEventListener('change', async (e) => {
 
         const result = await response.json();
         alert(result.message);
-
-        // Reload data
         loadData();
 
     } catch (error) {
@@ -301,6 +289,6 @@ fileInput.addEventListener('change', async (e) => {
     } finally {
         uploadBtn.innerText = 'Upload Data';
         uploadBtn.disabled = false;
-        fileInput.value = ''; // Reset
+        fileInput.value = '';
     }
 });
