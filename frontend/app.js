@@ -261,34 +261,169 @@ function generateDemoData() {
     }, 1000);
 }
 
-fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+// Dashboard Elements
+const dashboard = document.getElementById('manual-dashboard');
+const startInput = document.getElementById('startInput');
+const endInput = document.getElementById('endInput');
+const pickStartBtn = document.getElementById('pickStartBtn');
+const pickEndBtn = document.getElementById('pickEndBtn');
+const createTripBtn = document.getElementById('createTripBtn');
+const cancelTripBtn = document.getElementById('cancelTripBtn');
+const dashInstruction = document.getElementById('dash-instruction');
+const addTripBtn = document.getElementById('addTripBtn'); // From main UI
 
-    const formData = new FormData();
-    formData.append('file', file);
+// State
+let pickingMode = null; // 'start' or 'end'
+let tripStartPoint = null;
+let tripEndPoint = null;
+let startMarker = null;
+let endMarker = null;
 
-    uploadBtn.innerText = 'Uploading...';
-    uploadBtn.disabled = true;
+// Open Dashboard
+addTripBtn.addEventListener('click', () => {
+    dashboard.style.display = 'block';
+    resetDashboard();
+});
+
+// Cancel
+cancelTripBtn.addEventListener('click', () => {
+    dashboard.style.display = 'none';
+    clearMarkers();
+    resetDashboard();
+});
+
+function resetDashboard() {
+    pickingMode = null;
+    tripStartPoint = null;
+    tripEndPoint = null;
+    startInput.value = '';
+    endInput.value = '';
+    createTripBtn.disabled = true;
+    pickStartBtn.classList.remove('active');
+    pickEndBtn.classList.remove('active');
+    dashInstruction.innerText = 'Select "Pick" then click on map.';
+    map.getCanvas().style.cursor = '';
+    clearMarkers();
+}
+
+function clearMarkers() {
+    if (startMarker) startMarker.remove();
+    if (endMarker) endMarker.remove();
+    startMarker = null;
+    endMarker = null;
+}
+
+// Pick Button Logic
+pickStartBtn.addEventListener('click', () => {
+    pickingMode = 'start';
+    pickStartBtn.classList.add('active');
+    pickEndBtn.classList.remove('active');
+    dashInstruction.innerText = 'Click on Map to set Start Point';
+    map.getCanvas().style.cursor = 'crosshair';
+});
+
+pickEndBtn.addEventListener('click', () => {
+    pickingMode = 'end';
+    pickEndBtn.classList.add('active');
+    pickStartBtn.classList.remove('active');
+    dashInstruction.innerText = 'Click on Map to set End Point';
+    map.getCanvas().style.cursor = 'crosshair';
+});
+
+// Map Click Logic
+map.on('click', (e) => {
+    if (!pickingMode || dashboard.style.display === 'none') return;
+
+    const coords = e.lngLat;
+    const coordsText = `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+
+    if (pickingMode === 'start') {
+        tripStartPoint = coords;
+        startInput.value = coordsText;
+        if (startMarker) startMarker.remove();
+        startMarker = new maplibregl.Marker({ color: "#00ff00" })
+            .setLngLat(coords)
+            .addTo(map);
+    } else if (pickingMode === 'end') {
+        tripEndPoint = coords;
+        endInput.value = coordsText;
+        if (endMarker) endMarker.remove();
+        endMarker = new maplibregl.Marker({ color: "#ff0000" })
+            .setLngLat(coords)
+            .addTo(map);
+    }
+
+    // Check if ready
+    if (tripStartPoint && tripEndPoint) {
+        createTripBtn.disabled = false;
+        dashInstruction.innerText = 'Ready to Create Trip!';
+    }
+
+    // Reset picker state slightly but keep marker
+    pickingMode = null;
+    pickStartBtn.classList.remove('active');
+    pickEndBtn.classList.remove('active');
+    map.getCanvas().style.cursor = '';
+});
+
+// Create Logic
+createTripBtn.addEventListener('click', async () => {
+    if (!tripStartPoint || !tripEndPoint) return;
+
+    createTripBtn.innerText = 'Generating...';
+    createTripBtn.disabled = true;
+
+    await createManualPath(tripStartPoint, tripEndPoint);
+
+    // Close and reset
+    dashboard.style.display = 'none';
+    resetDashboard();
+    createTripBtn.innerText = 'Create Trip';
+
+    // Reload
+    setTimeout(loadData, 500);
+});
+
+async function createManualPath(start, end) {
+    const points = [];
+    const steps = 50;
+    const startTime = new Date(); // Use current time
+
+    // Calculate total duration (e.g., 2 hours simulated)
+    const durationMs = 2 * 60 * 60 * 1000;
+
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const lat = start.lat + (end.lat - start.lat) * t;
+        const lng = start.lng + (end.lng - start.lng) * t;
+
+        const jitter = 0.001;
+        const noiseLat = (Math.random() - 0.5) * jitter;
+        const noiseLng = (Math.random() - 0.5) * jitter;
+
+        const timestamp = new Date(startTime.getTime() + (durationMs * t));
+
+        points.push({
+            latitude: lat + noiseLat,
+            longitude: lng + noiseLng,
+            timestamp: timestamp.toISOString(),
+            source: "manual_entry"
+        });
+    }
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/api/upload/', {
+        const response = await fetch('http://127.0.0.1:8000/api/locations/', {
             method: 'POST',
-            body: formData
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(points)
         });
 
-        if (!response.ok) throw new Error('Upload failed');
+        if (!response.ok) throw new Error('Failed to save trip');
+        const res = await response.json();
+        alert(`Trip Created Successfully! (${res.message})`);
 
-        const result = await response.json();
-        alert(result.message);
-        loadData();
-
-    } catch (error) {
-        console.error('Upload error:', error);
-        alert('Upload failed: ' + error.message);
-    } finally {
-        uploadBtn.innerText = 'Upload Data';
-        uploadBtn.disabled = false;
-        fileInput.value = '';
+    } catch (e) {
+        console.error(e);
+        alert('Error saving trip: ' + e.message);
     }
-});
+}
