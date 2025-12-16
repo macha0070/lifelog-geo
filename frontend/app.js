@@ -267,6 +267,8 @@ const startInput = document.getElementById('startInput');
 const endInput = document.getElementById('endInput');
 const pickStartBtn = document.getElementById('pickStartBtn');
 const pickEndBtn = document.getElementById('pickEndBtn');
+const searchStartBtn = document.getElementById('searchStartBtn');
+const searchEndBtn = document.getElementById('searchEndBtn');
 const createTripBtn = document.getElementById('createTripBtn');
 const cancelTripBtn = document.getElementById('cancelTripBtn');
 const dashInstruction = document.getElementById('dash-instruction');
@@ -278,6 +280,72 @@ let tripStartPoint = null;
 let tripEndPoint = null;
 let startMarker = null;
 let endMarker = null;
+
+// Search Logic (Geocoding)
+async function searchCity(query, type) {
+    if (!query) return;
+
+    dashInstruction.innerText = `Searching for "${query}"...`;
+
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+        const results = await response.json();
+
+        if (results.length === 0) {
+            dashInstruction.innerText = 'Location not found. Try again.';
+            return;
+        }
+
+        const loc = results[0];
+        const coords = { lng: parseFloat(loc.lon), lat: parseFloat(loc.lat) };
+        const displayName = loc.display_name.split(',')[0]; // Keep it short
+
+        // Update State
+        if (type === 'start') {
+            tripStartPoint = coords;
+            startInput.value = displayName;
+            if (startMarker) startMarker.remove();
+            startMarker = new maplibregl.Marker({ color: "#00ff00" })
+                .setLngLat(coords)
+                .setPopup(new maplibregl.Popup().setText(displayName))
+                .addTo(map);
+        } else {
+            tripEndPoint = coords;
+            endInput.value = displayName;
+            if (endMarker) endMarker.remove();
+            endMarker = new maplibregl.Marker({ color: "#ff0000" })
+                .setLngLat(coords)
+                .setPopup(new maplibregl.Popup().setText(displayName))
+                .addTo(map);
+        }
+
+        map.flyTo({ center: coords, zoom: 10 });
+        dashInstruction.innerText = `Found: ${displayName}`;
+
+        if (tripStartPoint && tripEndPoint) {
+            createTripBtn.disabled = false;
+        }
+
+    } catch (e) {
+        console.error(e);
+        dashInstruction.innerText = 'Search Error.';
+    }
+}
+
+// Event Listeners for Search
+if (searchStartBtn) {
+    searchStartBtn.addEventListener('click', () => searchCity(startInput.value, 'start'));
+}
+if (startInput) {
+    startInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchCity(startInput.value, 'start'); });
+}
+
+if (searchEndBtn) {
+    searchEndBtn.addEventListener('click', () => searchCity(endInput.value, 'end'));
+}
+if (endInput) {
+    endInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchCity(endInput.value, 'end'); });
+}
 
 // Open Dashboard
 addTripBtn.addEventListener('click', () => {

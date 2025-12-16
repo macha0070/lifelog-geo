@@ -40,6 +40,31 @@
         </div>
     </div>
 
+    <div id="manual-dashboard">
+        <h2>Manual Trip Entry</h2>
+        <div class="input-group">
+            <label>Start Point (A)</label>
+            <div class="row">
+                <input type="text" id="startInput" placeholder="City name (e.g. Tokyo)">
+                <button id="searchStartBtn" class="icon-btn-small" style="background:#555;">🔍</button>
+                <button id="pickStartBtn" class="icon-btn-small">📍 Pick</button>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>End Point (B)</label>
+            <div class="row">
+                <input type="text" id="endInput" placeholder="City name (e.g. Osaka)">
+                <button id="searchEndBtn" class="icon-btn-small" style="background:#555;">🔍</button>
+                <button id="pickEndBtn" class="icon-btn-small">📍 Pick</button>
+            </div>
+        </div>
+        <div class="actions">
+            <button id="cancelTripBtn" class="btn-secondary">Cancel</button>
+            <button id="createTripBtn" class="btn-primary" disabled>Create Trip</button>
+        </div>
+        <div id="dash-instruction">Type city name & Search, OR select "Pick" then map.</div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 
